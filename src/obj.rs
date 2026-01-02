@@ -1,11 +1,12 @@
 use crate::objloader::OBJLoader;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::triangle;
 use crate::vec3::Vec3;
 use crate::{material::Material, triangle::Triangle, vec3::Point3};
 
-pub fn load_obj_file(file_path: &str, material: Rc<dyn Material>) -> Vec<Triangle> {
+pub fn load_obj_file(file_path: &str, material: Arc<dyn Material>) -> Vec<Triangle> {
     let mut triangles: Vec<Triangle> = Vec::new();
 
     let mut loader = OBJLoader::new();
@@ -42,7 +43,7 @@ pub fn load_obj_file(file_path: &str, material: Rc<dyn Material>) -> Vec<Triangl
                 loader.vertices[f2 - 1].1,
                 loader.vertices[f2 - 1].2,
             ),
-            Rc::clone(&material),
+            Arc::clone(&material),
         );
 
         triangles.push(triangle);

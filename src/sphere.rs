@@ -5,14 +5,15 @@ use crate::interval::Interval;
 use crate::material::Material;
 use crate::ray::Ray;
 use crate::vec3::{Point3, Vec3};
+use std::sync::Arc;
 pub struct Sphere {
     center: Point3,
     radius: f64,
-    mat: Rc<dyn Material>,
+    mat: Arc<dyn Material>,
 }
 
 impl Sphere {
-    pub fn new(center: Point3, radius: f64, mat: Rc<dyn Material>) -> Self {
+    pub fn new(center: Point3, radius: f64, mat: Arc<dyn Material>) -> Self {
         Sphere {
             center,
             radius,

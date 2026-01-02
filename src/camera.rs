@@ -12,6 +12,11 @@ use crate::vec3::Vec3;
 use image::{ImageBuffer, Rgba};
 use std::io::Write;
 
+use rayon::prelude::*;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::sync::Mutex;
+
 pub struct CameraParams {
     pub aspect_ratio: f64,
     pub img_width: usize,
@@ -96,33 +101,42 @@ impl Camera {
         println!("{} {}", self.img_width, self.img_height);
         println!("255");
 
-        let mut pixel_data = vec![0u8; self.img_width * self.img_height * 4]; // RGBA format
+        let pixel_data = Arc::new(Mutex::new(vec![0u8; self.img_width * self.img_height * 4]));
+        let completed_rows = Arc::new(AtomicUsize::new(0));
+        let total_rows = self.img_height;
 
-        for j in (0..self.img_height).rev() {
-            eprint!("\rScanlines remaining: {}", j);
-            std::io::stdout().flush().unwrap();
+        (0..self.img_height).into_par_iter().for_each(|j| {
+            let mut row_data = Vec::with_capacity(self.img_width);
+            
             for i in 0..self.img_width {
                 let mut pixel_color = Vec3::new(0.0, 0.0, 0.0);
+                
                 for _ in 0..self.samples_per_pixel {
                     let r = self.get_ray(i, j);
                     pixel_color = pixel_color + self.ray_color(&r, self.max_depth, world);
                 }
-                write_color(
-                    self.pixel_samples_scale * pixel_color,
-                    &mut pixel_data,
-                    self.img_width,
-                    j,
-                    i,
-                );
+                
+                row_data.push((i, self.pixel_samples_scale * pixel_color));
             }
-        }
+        
+            {
+                let mut data = pixel_data.lock().unwrap();
+                for (i, color) in row_data {
+                    write_color(color, &mut data, self.img_width, j, i);
+                }
+            }
+            
+            let completed = completed_rows.fetch_add(1, Ordering::Relaxed) + 1;
+            eprint!("\rRows completed: {}/{}", completed, total_rows);
+            std::io::stderr().flush().unwrap();
+        });
+        eprintln!("\rDone. ");
 
-        eprintln!("\rDone.");
-
+        let final_data = Arc::try_unwrap(pixel_data).unwrap().into_inner().unwrap();
         let img_buffer: ImageBuffer<Rgba<u8>, _> =
-            ImageBuffer::from_raw(self.img_width as u32, self.img_height as u32, pixel_data)
-                .unwrap();
-        img_buffer.save("output.png").unwrap()
+        ImageBuffer::from_raw(self.img_width as u32, self.img_height as u32, final_data)
+            .unwrap();
+    img_buffer.save("img/output.png").unwrap();
     }
 
     pub fn initialize(&mut self) {

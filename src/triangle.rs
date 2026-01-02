@@ -1,4 +1,5 @@
 use std::f64::EPSILON;
+use std::sync::Arc;
 
 use crate::{
     hittable::Hittable,
@@ -12,11 +13,11 @@ pub struct Triangle {
     pub p1: Point3,
     pub p2: Point3,
     pub normal: Vec3,
-    pub mat: Rc<dyn Material>,
+    pub mat: Arc<dyn Material>,
 }
 
 impl Triangle {
-    pub fn new(p0: Point3, p1: Point3, p2: Point3, mat: Rc<dyn Material>) -> Self {
+    pub fn new(p0: Point3, p1: Point3, p2: Point3, mat: Arc<dyn Material>) -> Self {
         let edge1 = p1 - p0;
         let edge2 = p2 - p0;
         let normal = edge1.cross(&edge2).normalize();
@@ -80,7 +81,7 @@ impl Hittable for Triangle {
     }
 }
 
-pub fn create_cube(material: Rc<dyn Material>, size: f64) -> Vec<Triangle> {
+pub fn create_cube(material: Arc<dyn Material>, size: f64) -> Vec<Triangle> {
     let v0 = Point3::new(0.0, 0.0, 0.0);
     let v1 = Point3::new(size, 0.0, 0.0);
     let v2 = Point3::new(size, size, 0.0);
